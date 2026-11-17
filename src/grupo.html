@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Grupo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 420px;
+            margin: 40px auto;
+            padding: 0 16px;
+            background: #f4f4f4;
+            color: #222;
+        }
+
+        h1 { text-align: center; }
+        h2 { margin-top: 32px; font-size: 18px; }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background: #2d6cdf;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover { background: #1f55b8; }
+
+        ul { padding-left: 20px; }
+        li { margin-bottom: 6px; }
+
+        a { color: #2d6cdf; }
+    </style>
+</head>
+<body>
+    <a href="/home">&larr; voltar</a>
+    <h1 id="titulo">...</h1>
+    <p>Codigo para convidar: <b id="codigo"></b></p>
+
+    <h2>Participantes</h2>
+    <ul id="pessoas"></ul>
+
+    <button id="btnSortear" style="display:none">SORTEAR</button>
+
+    <h2 id="resultado"></h2>
+
+    <script>
+        // pega o ?id=... da URL
+        const id = new URLSearchParams(window.location.search).get("id")
+
+        async function carregar() {
+            const resp = await fetch("/api/grupos/" + id)
+            if (!resp.ok) {
+                alert((await resp.json()).msg)
+                window.location.href = "/home"
+                return
+            }
+            const g = await resp.json()
+
+            document.getElementById("titulo").textContent = g.name
+            document.getElementById("codigo").textContent = g.code
+
+            const ul = document.getElementById("pessoas")
+            ul.innerHTML = ""
+            for (const p of g.pessoas) {
+                const li = document.createElement("li")
+                li.textContent = p.username
+                ul.appendChild(li)
+            }
+
+            // botao so aparece pro dono e antes do sorteio
+            const btn = document.getElementById("btnSortear")
+            btn.style.display = (g.souDono && !g.drawn) ? "inline" : "none"
+
+            // depois do sorteio, mostra quem eu tirei
+            if (g.drawn) {
+                const r = await fetch("/api/grupos/" + id + "/meu")
+                const dados = await r.json()
+                document.getElementById("resultado").textContent = "Voce tirou: " + dados.tirou
+            }
+        }
+
+        document.getElementById("btnSortear").addEventListener("click", async () => {
+            const resp = await fetch("/api/grupos/" + id + "/sortear", { method: "POST" })
+            if (!resp.ok) return alert((await resp.json()).msg)
+            carregar()
+        })
+
+        carregar()
+    </script>
+</body>
+</html>

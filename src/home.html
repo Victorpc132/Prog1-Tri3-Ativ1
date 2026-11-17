@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 420px;
+            margin: 40px auto;
+            padding: 0 16px;
+            background: #f4f4f4;
+            color: #222;
+        }
+
+        h1 { text-align: center; }
+        h2 { margin-top: 32px; font-size: 18px; }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background: #2d6cdf;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover { background: #1f55b8; }
+
+        ul { padding-left: 20px; }
+        li { margin-bottom: 6px; }
+
+        a { color: #2d6cdf; }
+    </style>
+</head>
+<body>
+    <h1>Ola, <span id="nome">...</span></h1>
+    <button id="btnSair">sair</button>
+
+    <h2>Criar grupo</h2>
+    <form id="formCriar">
+        <input type="text" name="name" placeholder="nome do grupo">
+        <button>criar</button>
+    </form>
+
+    <h2>Entrar com codigo</h2>
+    <form id="formEntrar">
+        <input type="text" name="code" placeholder="codigo">
+        <button>entrar</button>
+    </form>
+
+    <h2>Meus grupos</h2>
+    <ul id="lista"></ul>
+
+    <script>
+        async function init() {
+            const resp = await fetch("/api/eu")
+            if (!resp.ok) {
+                window.location.href = "/"
+                return
+            }
+            const eu = await resp.json()
+            document.getElementById("nome").textContent = eu.username
+            carregarGrupos()
+        }
+
+        async function carregarGrupos() {
+            const resp = await fetch("/api/grupos")
+            const grupos = await resp.json()
+            const ul = document.getElementById("lista")
+            ul.innerHTML = ""
+            for (const g of grupos) {
+                const li = document.createElement("li")
+                const a = document.createElement("a")
+                a.href = "/grupo?id=" + g.id
+                a.textContent = g.name + " (codigo: " + g.code + ")"
+                li.appendChild(a)
+                ul.appendChild(li)
+            }
+        }
+
+        document.getElementById("formCriar").addEventListener("submit", async (ev) => {
+            ev.preventDefault()
+            const form = ev.target
+            const resp = await fetch("/api/grupos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: form.name.value })
+            })
+            if (!resp.ok) return alert((await resp.json()).msg)
+            form.reset()
+            carregarGrupos()
+        })
+
+        document.getElementById("formEntrar").addEventListener("submit", async (ev) => {
+            ev.preventDefault()
+            const form = ev.target
+            const resp = await fetch("/api/grupos/entrar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: form.code.value })
+            })
+            if (!resp.ok) return alert((await resp.json()).msg)
+            form.reset()
+            carregarGrupos()
+        })
+
+        document.getElementById("btnSair").addEventListener("click", async () => {
+            await fetch("/api/logout", { method: "POST" })
+            window.location.href = "/"
+        })
+
+        init()
+    </script>
+</body>
+</html>
