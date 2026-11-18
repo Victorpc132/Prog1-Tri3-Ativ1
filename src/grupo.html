@@ -63,7 +63,6 @@
     <h2 id="resultado"></h2>
 
     <script>
-        // pega o ?id=... da URL
         const id = new URLSearchParams(window.location.search).get("id")
 
         async function carregar() {
@@ -86,11 +85,9 @@
                 ul.appendChild(li)
             }
 
-            // botao so aparece pro dono e antes do sorteio
             const btn = document.getElementById("btnSortear")
             btn.style.display = (g.souDono && !g.drawn) ? "inline" : "none"
 
-            // depois do sorteio, mostra quem eu tirei
             if (g.drawn) {
                 const r = await fetch("/api/grupos/" + id + "/meu")
                 const dados = await r.json()

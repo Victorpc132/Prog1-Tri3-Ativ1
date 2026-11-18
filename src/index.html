@@ -48,20 +48,42 @@
         li { margin-bottom: 6px; }
 
         a { color: #2d6cdf; }
+
+        .abas {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .aba {
+            flex: 1;
+            background: #ddd;
+            color: #555;
+        }
+
+        .aba:hover { background: #ccc; }
+
+        .aba.ativa {
+            background: #2d6cdf;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <h1>Amigo Secreto</h1>
 
-    <h2>Entrar</h2>
+    <div class="abas">
+        <button type="button" id="abaLogin" class="aba ativa">Entrar</button>
+        <button type="button" id="abaCadastro" class="aba">Cadastrar-se</button>
+    </div>
+
     <form id="formLogin">
         <input type="text" name="username" placeholder="usuario">
         <input type="password" name="password" placeholder="senha">
         <button>entrar</button>
     </form>
 
-    <h2>Cadastrar-se</h2>
-    <form id="formCadastro">
+    <form id="formCadastro" style="display:none">
         <input type="text" name="username" placeholder="usuario">
         <input type="text" name="email" placeholder="email">
         <input type="password" name="password" placeholder="senha">
@@ -71,6 +93,25 @@
     <script>
         const formLogin = document.getElementById("formLogin")
         const formCadastro = document.getElementById("formCadastro")
+        const abaLogin = document.getElementById("abaLogin")
+        const abaCadastro = document.getElementById("abaCadastro")
+
+        function mostrarLogin() {
+            formLogin.style.display = "flex"
+            formCadastro.style.display = "none"
+            abaLogin.classList.add("ativa")
+            abaCadastro.classList.remove("ativa")
+        }
+
+        function mostrarCadastro() {
+            formCadastro.style.display = "flex"
+            formLogin.style.display = "none"
+            abaCadastro.classList.add("ativa")
+            abaLogin.classList.remove("ativa")
+        }
+
+        abaLogin.addEventListener("click", mostrarLogin)
+        abaCadastro.addEventListener("click", mostrarCadastro)
 
         formLogin.addEventListener("submit", async (ev) => {
             ev.preventDefault()
@@ -104,6 +145,7 @@
             if (resp.ok) {
                 alert("Cadastrado! Agora e so entrar.")
                 formCadastro.reset()
+                mostrarLogin()
                 return
             }
             const dados = await resp.json()

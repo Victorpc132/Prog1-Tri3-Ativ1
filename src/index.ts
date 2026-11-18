@@ -1,52 +1,93 @@
 import login from "./index.html"
 import home from "./home.html"
-import db from "./db"
+import grupo from "./grupo.html"
+import { db } from "./db"
 
-const loggedUsers: any = {}
+const sessoes: any = {}
+
+function usuarioLogado(req: any) {
+    const codigo = req.cookies.get("ses")
+    if (!codigo) return null
+    return sessoes[codigo] || null
+}
+
+function erro(msg: string, status: number) {
+    return Response.json({ msg: msg }, { status: status })
+}
 
 const srv = Bun.serve({
     port: 3000,
     routes: {
+
         "/": login,
         "/home": home,
+        "/grupo": grupo,
 
-        "/user": {
+        "/api/cadastro": {
             POST: async (req) => {
-                const body = await req.body?.json()
-                const query = db.query(`INSERT INTO user(username, password_hash) VALUES(:username, :password_hash)`)
+                const body: any = await req.json()
+
+                if (!body.username || !body.email || !body.password) {
+                    return erro("preencha tudo", 400)
+                }
+
                 const hash = await Bun.password.hash(body.password)
-                const data = query.run({ ":username": body.username, ":password_hash": hash })
-                return Response.json(data)
+
+                try {
+                    db.query("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)")
+                        .run(body.username, body.email, hash)
+                } catch (e) {
+                    return erro("usuario ou email ja existe", 409)
+                }
+
+                return Response.json({ ok: true })
             }
         },
 
-        "/login": {
+        "/api/login": {
             POST: async (req) => {
-                const body = await req.body?.json()
-                const query = db.query(`SELECT * FROM user WHERE username=:username LIMIT 1`)
-                const data: any = query.get({ ":username": body.username })
-                if (!data)
-                    return Response.json({ msg: "usuário não encontrado" }, { status: 404 })
-                const hash = data.password_hash
-                const isMatch = await Bun.password.verify(body.password, hash)
-                if (!isMatch)
-                    return Response.json({ msg: "senha incorreta" }, { status: 401 })
-                const uuid = crypto.randomUUID()
-                delete data.password_hash
-                loggedUsers[uuid] = data
-                req.cookies.set("ses", uuid)
-                return Response.json(isMatch)
+                const body: any = await req.json()
+
+                const usuario: any = db.query("SELECT * FROM users WHERE username = ?")
+                    .get(body.username)
+
+                if (!usuario) {
+                    return erro("usuario nao encontrado", 404)
+                }
+
+                const senhaCerta = await Bun.password.verify(body.password, usuario.password_hash)
+                if (!senhaCerta) {
+                    return erro("senha incorreta", 401)
+                }
+
+                const codigo = crypto.randomUUID()
+                sessoes[codigo] = { id: usuario.id, username: usuario.username }
+
+                req.cookies.set("ses", codigo)
+
+                return Response.json({ ok: true })
             }
         },
 
-        "/login/user": (req) => {
-            const ses = req.cookies.get("ses") as string
-            const data = loggedUsers[ses]
-            if (!ses || !data)
-                return Response.json({ msg: "usuário não esta logado" }, { status: 401 })
-            return Response.json(data)
+        "/api/logout": {
+            POST: async (req) => {
+                const codigo = req.cookies.get("ses")
+                if (codigo) {
+                    delete sessoes[codigo]
+                }
+                req.cookies.delete("ses")
+                return Response.json({ ok: true })
+            }
+        },
+
+        "/api/eu": {
+            GET: (req) => {
+                const eu = usuarioLogado(req)
+                if (!eu) return erro("nao logado", 401)
+                return Response.json({ id: eu.id, username: eu.username })
+            }
         }
     }
 })
 
-console.log(`Server running on ${srv.url}`)
+console.log(`Servidor rodando em ${srv.url}`)
